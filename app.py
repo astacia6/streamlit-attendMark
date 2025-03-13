@@ -5,6 +5,7 @@ from openpyxl.styles import PatternFill
 import zipfile
 import os
 import time
+import re
 
 # 페이지 설정
 st.set_page_config(page_title="출결 서류 처리", layout="wide")
@@ -31,6 +32,14 @@ if uploaded_files:
     # 결과 파일을 저장할 임시 디렉토리 생성
     os.makedirs("temp", exist_ok=True)
     
+    # 파일 이름에서 월 정보를 추출
+    month_match = None
+    for uploaded_file in uploaded_files:
+        match = re.search(r'(\d{2})월', uploaded_file.name)
+        if match:
+            month_match = match.group(1)
+            break
+
     for uploaded_file in uploaded_files:
         # 엑셀 파일 읽기
         workbook = load_workbook(uploaded_file)
@@ -41,7 +50,8 @@ if uploaded_files:
         
         for row in sheet.iter_rows(min_row=2, max_row=sheet.max_row):
             cell = row[4]  # E열 (0부터 시작하므로 인덱스 4)
-            if "출석인정" in str(cell.value) or "결석" in str(cell.value):
+            cell_value = str(cell.value)
+            if ("출석인정" in cell_value or "결석" in cell_value) and "미인정결석" not in cell_value:
                 cell.fill = fill
 
         # 병합된 셀에서 B6의 값을 가져오기
@@ -59,8 +69,13 @@ if uploaded_files:
         # 엑셀 파일을 다시 저장
         workbook.save(new_filename)
 
+    # 추출한 월 정보를 사용하여 ZIP 파일 이름 설정
+    if month_match:
+        zip_filename = f"{month_match}월별출결현황.zip"
+    else:
+        zip_filename = "출결현황.zip"
+
     # ZIP 파일로 압축
-    zip_filename = "highlighted_files.zip"
     with zipfile.ZipFile(zip_filename, 'w') as zipf:
         for file in os.listdir("temp"):
             zipf.write(os.path.join("temp", file), file)
