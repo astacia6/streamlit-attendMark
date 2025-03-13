@@ -81,7 +81,7 @@ if uploaded_files:
             zipf.write(os.path.join("temp", file), file)
 
     # 안내 문구 및 이모지 추가
-    st.markdown("<h3>출결 필수 서류 항목 표시가 완료되었습니다. :point_down:</h3>", unsafe_allow_html=True)
+    st.markdown("<h3>출결 필수 서류 항목 표시가 완료되었습니다.</h3>", unsafe_allow_html=True)
 
     # 다운로드 링크 제공
     with open(zip_filename, "rb") as file:
