@@ -18,7 +18,7 @@ st.markdown("""
     """, unsafe_allow_html=True)
 
 st.markdown("### 반별 출결 엑셀 파일을 업로드하세요.")
-st.markdown("업로드된 파일에서 '질병결석' 또는 '인정결석'이 포함된 행을 음영 처리합니다.")
+st.markdown("업로드된 파일에서 '출석인정' 또는 '결석'이 포함된 셀을 음영 처리합니다.")
 
 # 레이아웃 조정
 col1, col2 = st.columns([1, 3])
@@ -33,26 +33,31 @@ if uploaded_files:
     
     for uploaded_file in uploaded_files:
         # 엑셀 파일 읽기
-        df = pd.read_excel(uploaded_file)
+        workbook = load_workbook(uploaded_file)
+        sheet = workbook.active
 
-        # 특정 열의 값을 검사하여 조건에 맞는 행에 음영 처리
-        def highlight_rows(workbook):
-            sheet = workbook.active  # 첫 번째 시트를 선택
-            fill = PatternFill(start_color="D3D3D3", end_color="D3D3D3", fill_type="solid")
-            
-            for row in sheet.iter_rows(min_row=2, max_row=sheet.max_row):
-                cell = row[3]  # 4번째 열 (0부터 시작하므로 인덱스 3)
-                if "질병결석" in str(cell.value) or "인정결석" in str(cell.value):
-                    for c in row:
-                        c.fill = fill
+        # 특정 셀의 값을 검사하여 조건에 맞는 셀에 음영 처리
+        fill = PatternFill(start_color="D3D3D3", end_color="D3D3D3", fill_type="solid")
+        
+        for row in sheet.iter_rows(min_row=2, max_row=sheet.max_row):
+            cell = row[4]  # E열 (0부터 시작하므로 인덱스 4)
+            if "출석인정" in str(cell.value) or "결석" in str(cell.value):
+                cell.fill = fill
+
+        # 병합된 셀에서 B6의 값을 가져오기
+        b6_value = sheet['B6'].value
+        n6_value = sheet['N6'].value
+
+        # n6_value를 문자열로 변환하여 마지막 두 글자 추출
+        if b6_value and n6_value:
+            n6_str = str(n6_value)
+            timestamp = int(time.time())
+            new_filename = f"temp/{b6_value}{n6_str[-2:]}월_{timestamp}.xlsx"
+        else:
+            new_filename = f"temp/highlighted_{uploaded_file.name}_{timestamp}.xlsx"
 
         # 엑셀 파일을 다시 저장
-        timestamp = int(time.time())
-        output_path = f"temp/{timestamp}_{uploaded_file.name}"
-        with pd.ExcelWriter(output_path, engine='openpyxl') as writer:
-            df.to_excel(writer, index=False)
-            workbook = writer.book
-            highlight_rows(workbook)
+        workbook.save(new_filename)
 
     # ZIP 파일로 압축
     zip_filename = "highlighted_files.zip"
